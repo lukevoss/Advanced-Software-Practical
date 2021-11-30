@@ -1,8 +1,7 @@
 import torch
 
-A = torch.tensor([[4, 1], [2, 3]])
+a = torch.tensor([3])
 v = torch.tensor([[1], [2]])
-X = A @ v
-print(X)
-for i in range(5):
-    print(i)
+print(v)
+w = torch.t(v)
+print(a@v)

@@ -2,7 +2,8 @@ import torch
 
 
 def arnoldi_iteration(A, b, m):
-    """Computes a orthogonal basis of the Krylov subspace of A: the space
+    """Arnoldi-Modified Gram-Schmidt Iteration:
+    Computes a orthogonal basis of the Krylov subspace of A: the space
     spanned by {b, Ab, ..., A^n b}.
 
     Arguments
@@ -22,6 +23,15 @@ def arnoldi_iteration(A, b, m):
     # Normalizing input vector b
     V[:, 0] = b/torch.linalg.norm(b, 2)
     for j in range(m):
+        # Multiply Matrix A each time with new Vector v to get new candidate vector w
         w = A @ V[:, j]
-        for i in range(j):
-            H[i, j] = V[:, i]
+        for i in range(j):  # Subtract the projections on previous vectors
+            H[i, j] = torch.t(V[:, i]) @ w
+            w = w - H[i, j]*V[:, i]
+        # Normalizing vector w
+        H[j+1, j] = torch.linalg.norm(w, 2)
+        if H[j+1, j] > eps:  # checking if rounded 0
+            V[:, j+1] = w/H[j+1, j]
+        else:  # if it happens stop iterating
+            return V, H
+    return V, H
