@@ -6,9 +6,9 @@ def arnoldi_iteration(A, b, m):
     spanned by {b, Ab, ..., A^m b}.
 
     Arguments
-    A:  n × n array
-    b:  initial vector (length n)
-    m:  dimension of Krylov subspace, must be >= 1
+    A:  n × n pytorch array
+    b:  initial pytorch vector (length n)
+    m:  dimension of Krylov subspace (int), must be >= 1
 
     Returns
     V:  n x (m+1) array, the columns are an orthonormal basis of the

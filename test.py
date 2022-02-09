@@ -4,7 +4,7 @@ from arnoldi_and_lanczos_iterations import *
 # First testing of Arnoldi Iteration:
 
 # create matrix A with known eigenvalues 1 to n=25
-n = 25
+n = 5
 eigvals = torch.linspace(1., n, n)
 eigvecs = torch.randn(n, n)
 A = torch.linalg.solve(eigvecs, (torch.diag(eigvals) @ eigvecs))
@@ -12,7 +12,6 @@ A = torch.linalg.solve(eigvecs, (torch.diag(eigvals) @ eigvecs))
 eigvals_test, eigvecs_test = torch.linalg.eig(A)
 print("Eigenvalues of created Matrix:")
 print(eigvals_test)
-
 # Picking a starting vector and then normalizing it
 b = torch.randn(n)
 b = b/torch.linalg.norm(b)
@@ -23,10 +22,14 @@ V, H = arnoldi_iteration(A, b, m)
 eigvals_aprox, eigvecs_aprox = torch.linalg.eig(H)
 print("Approximated Eigenvalues with no Dimension Reduction:")
 print(eigvals_aprox)
+test_H = torch.t(V) @ A @ V
+error = abs(test_H - H)
+print(error)
+print(torch.isclose(torch.t(V) @ A @ V, H, rtol= 1e-03, atol=1e-05))
 
 
 # Testing Arnoldi algorithm with m=10
-m = 10
+m = 5
 V, H = arnoldi_iteration(A, b, m)
 eigvals_aprox, eigvecs_aprox = torch.linalg.eig(H)
 print("Approximated Eigenvalues with Dimension Reduction:")
@@ -79,8 +82,16 @@ print("Error of norm:")
 print(abs(norm_VAV-norm_H))
 
 # Testing Lanczos algorithm with dimensionality reduction
-m = 10
+m =5
 V, T = lanczos_iteration(A, b, m)
 eigvals_aprox, eigvecs_aprox = torch.linalg.eig(T)
 print("Approximated Eigenvalues with no Dimension Reduction:")
 print(eigvals_aprox)
+test_T = torch.t(V) @ A @ V
+error = abs(test_T - T)
+print("Error")
+print(error)
+print("VAV")
+print(test_T)
+print(T)
+print(torch.isclose(torch.t(V) @ A @ V, T,  rtol=1e-03, atol=1e-05))
