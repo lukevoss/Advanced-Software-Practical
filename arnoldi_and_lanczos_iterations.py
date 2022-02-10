@@ -1,6 +1,8 @@
 import torch
 
 # Arnoldi Iteration
+
+
 def arnoldi_iteration(A, b, m):
     """Computes a orthogonal basis of the (m+1)-Krylov subspace of A: the space
     spanned by {b, Ab, ..., A^m b}.
@@ -39,7 +41,9 @@ def arnoldi_iteration(A, b, m):
                 return V, H
     return V, H
 
-#Lanczos Iteration
+# Lanczos Iteration
+
+
 def lanczos_iteration(A, b, m):
     """Computes a orthogonal basis of the Krylov subspace of a symmetric Matrix A:
     the space spanned by {b, Ab, ..., A^n b}.
@@ -57,6 +61,9 @@ def lanczos_iteration(A, b, m):
     Cost:
     3(2m-1)n flops
     """
+    # Test if input matrix is hermitian
+    if not torch.allclose(torch.t(A), A):
+        raise ValueError("The Input matrix A is not a hermitian matrix")
     eps = 1e-12  # allowed rounding Error
     n = A.shape[0]
     V = torch.zeros(n, m)  # v0 = 0

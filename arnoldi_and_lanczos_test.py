@@ -7,7 +7,7 @@ For large matrices the problem arises that the calculation V^T*A*V is numericall
 This is especially the case for values which are equal to 0 in the H or T matrix.
 
 H = 
-low error ->    [-2, -1,  1, 7]
+low error ->    [-2, -1,  1, 7]<-low error
                 [ 7,  3, -3, 2]
                 [ 0,  3,  5, 4]
 higher error->  [ 0,  0,  3, 6]
@@ -111,3 +111,13 @@ class TestLanczosIteration:
         V, T = lanczos_iteration(A, b, m)
         # Testing if V^(T)*A*V=T
         assert torch.allclose(torch.t(V) @ A @ V, T, rtol=1e-03, atol=1e-03)
+
+    def test_throw_error(self, _A, _b):
+        """
+        Test if an error is thrown if not a hermitian matrix is given as input
+        """
+        A = _A
+        b = _b
+        m = 3
+        with pytest.raises(ValueError):
+             V, T = lanczos_iteration(A, b, m)

@@ -1,5 +1,6 @@
 import torch
 from arnoldi_and_lanczos_iterations import *
+import resource
 
 # First testing of Arnoldi Iteration:
 
@@ -96,3 +97,4 @@ print("VAV")
 print(test_T)
 print(T)
 print(torch.isclose(torch.t(V) @ A @ V, T,  rtol=1e-03, atol=1e-05))
+print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
