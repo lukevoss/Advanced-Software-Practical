@@ -22,6 +22,7 @@ V, H = arnoldi_iteration(A, b, m)
 eigvals_aprox, eigvecs_aprox = torch.linalg.eig(H)
 print("Approximated Eigenvalues with no Dimension Reduction:")
 print(eigvals_aprox)
+print(H)
 test_H = torch.t(V) @ A @ V
 error = abs(test_H - H)
 print(error)

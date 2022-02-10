@@ -6,14 +6,14 @@ def arnoldi_iteration(A, b, m):
     spanned by {b, Ab, ..., A^m b}.
 
     Arguments
-    A:  n × n pytorch array
-    b:  initial pytorch vector (length n)
+    A:  n × n torch array
+    b:  initial torch vector (length n)
     m:  dimension of Krylov subspace (int), must be >= 1
 
     Returns
-    V:  n x (m+1) array, the columns are an orthonormal basis of the
+    V:  n x m torch array, the columns are an orthonormal basis of the
         Krylov subspace.
-    H:  (m+1) x m array, A on basis V. It is upper Hessenberg.
+    H:  m x m torch array, A on basis V. It is upper Hessenberg.
 
     Cost:
     3/2(m^2-m+1)n flops
@@ -45,14 +45,14 @@ def lanczos_iteration(A, b, m):
     the space spanned by {b, Ab, ..., A^n b}.
 
     Arguments
-    A:  Hermitian matrix, n × n array
-    b:  initial vector v1 (length n)
-    m:  dimension of Krylov subspace, must be >= 1
+    A:  Hermitian matrix, n × n torch array
+    b:  initial torch vector v1 (length n)
+    m:  dimension of Krylov subspace, must be >= 1 (int)
 
     Returns
-    V:  n x m array, the columns are an orthonormal basis of the
+    V:  n x m torch array, the columns are an orthonormal basis of the
         Krylov subspace.
-    T:  m x m array, A on basis V. It is upper Hessenberg.
+    T:  m x m torch array, A on basis V. It is upper Hessenberg.
 
     Cost:
     3(2m-1)n flops

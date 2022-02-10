@@ -2,6 +2,23 @@ import pytest
 import torch
 from arnoldi_and_lanczos_iterations import *
 
+"""
+For large matrices the problem arises that the calculation V^T*A*V is numerically inaccurate. 
+This is especially the case for values which are equal to 0 in the H or T matrix.
+
+H = 
+low error ->    [-2, -1,  1, 7]
+                [ 7,  3, -3, 2]
+                [ 0,  3,  5, 4]
+higher error->  [ 0,  0,  3, 6]
+
+T = 
+low error ->    [-2, -1,  0, 0]<-higher error
+                [ 7,  3, -3, 0]
+                [ 0,  3,  5, 4]
+higher error->  [ 0,  0,  3, 6]
+"""
+
 
 @pytest.fixture
 def _A():
@@ -34,26 +51,46 @@ def _b():
 
 class TestArnoldiIteration:
     def test_without_dimension_reduction(self, _A, _b):
+        """
+        Test Arnoldi iteration without dimension reduction
+
+        Test by Equation:
+        V^(T)* A * V = H (Saad, Iterative Methods for Sparse Linear Systems, Equation 6.8)
+        """
         A = _A
         b = _b
         m = A.shape[0]
         V, H = arnoldi_iteration(A, b, m)
         # Testing if V^(T)*A*V=H
         test_H = torch.t(V) @ A @ V
+        # check if entries of matrices are close
         assert torch.allclose(test_H, H, rtol=1e-03, atol=1e-03)
 
     def test_with_dimension_reduction(self, _A, _b):
+        """
+        Test Arnoldi iteration with dimension reduction
+
+        Test by Equation 
+        V^(T)* A * V = H (Saad, Iterative Methods for Sparse Linear Systems, Equation 6.8)
+        """
         A = _A
         b = _b
         m = 3
         V, H = arnoldi_iteration(A, b, m)
         # Testing if V^(T)*A*V=H
         test_H = torch.t(V) @ A @ V
+        # check if entries of matrices are close
         assert torch.allclose(test_H, H, rtol=1e-03, atol=1e-03)
 
 
 class TestLanczosIteration:
     def test_without_dimension_reduction(self, _A_symm, _b):
+        """
+        Test Lanczos iteration without dimension reduction
+
+        Test by Equation 
+        V^(T)* A * V = H (Saad, Iterative Methods for Sparse Linear Systems, Equation 6.8)
+        """
         A = _A_symm
         b = _b
         m = A.shape[0]
@@ -62,6 +99,12 @@ class TestLanczosIteration:
         assert torch.allclose(torch.t(V) @ A @ V, T, rtol=1e-03, atol=1e-03)
 
     def test_with_dimension_reduction(self, _A_symm, _b):
+        """
+        Test Lanczos iteration with dimension reduction
+
+        Test by Equation 
+        V^(T)* A * V = H (Saad, Iterative Methods for Sparse Linear Systems, Equation 6.8)
+        """
         A = _A_symm
         b = _b
         m = 3
