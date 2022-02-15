@@ -3,9 +3,10 @@ import time
 import matplotlib.pyplot as plt
 from arnoldi_and_lanczos_iterations import *
 
-# TODO: Masure storage consumption
-# TODO: Check figure 3 for bug
-# TODO: Check Iterations for bug in V Matrix, or analyse numerical problem
+# TODO: Measure storage consumption
+# TODO: Check Iterations for bug in V Matrix, or analyse numerical problem of calculating VTAV=H
+# TODO: New Error Measurement
+# TODO: Test if algorithms work for non quadratic matrices
 
 
 def main():
@@ -13,6 +14,10 @@ def main():
     To compare different Iterative-methods for approximating Eigenvalues and Eigenvectors,
     choose the algorithms to compare and enter them in either of the given arrays.
     Functions must be imported first
+
+    Compared methods need to return the matrices: V, H
+    for which the following equation must be valid:
+        V^(T)* A * V = H (Saad, Iterative Methods for Sparse Linear Systems, Equation 6.8)
 
     General Matrix Solvers (e.g Arnoldi-Iteration) represent solvers, 
     that work with general non-hermitian matrices. 
@@ -55,19 +60,21 @@ def compare(solvers, hermitian=False):
             V, H = f(A, b, n)  # execute iterative solver method
             end_time = time.perf_counter()
             executionTime[i, n-1] = end_time - start_time
-            meanErrors[i, n-1] = calculateError(V, H, A)
+            meanErrors[i, n-1] = calculateError(H, A)
 
         # Plot different methods in same subplot
         # Comparing dimensions of matrix A to mean error of matrix H
         plt.subplot(121)
-        plt.plot(sizeN, meanErrors[i, :])
+        plt.plot(sizeN, meanErrors[i, :], label=f.__name__)
         plt.ylabel('Mean Error of Matrix Entries')
         plt.xlabel('Dimension n of nxn Matrix')
+        plt.legend()
         # Comparing dimensions of matrix A to execution time
         plt.subplot(122)
-        plt.plot(sizeN, executionTime[i, :])
+        plt.plot(sizeN, executionTime[i, :], label=f.__name__)
         plt.ylabel('Execution time in s')
         plt.xlabel('Dimension n of nxn Matrix')
+        plt.legend()
 
         i += 1
 
@@ -93,17 +100,19 @@ def compare(solvers, hermitian=False):
             V, H = f(A, b, m)
             end_time = time.perf_counter()
             executionTime[i, m-1] = end_time - start_time
-            meanErrors[i, m-1] = calculateError(V, H, A)
+            meanErrors[i, m-1] = calculateError(H, A)
 
         plt.subplot(121)
-        plt.plot(sizeM, meanErrors[i, :])
+        plt.plot(sizeM, meanErrors[i, :], label=f.__name__)
         plt.ylabel('Mean Error of Matrix Entries')
         plt.xlabel('Reduced Dimension m of 50x50 Matrix')
+        plt.legend()
 
         plt.subplot(122)
-        plt.plot(sizeM, executionTime[i, :])
+        plt.plot(sizeM, executionTime[i, :], label=f.__name__)
         plt.ylabel('Execution time in s')
         plt.xlabel('Reduced Dimension m of 50x50 Matrix')
+        plt.legend()
 
         i += 1
 
@@ -124,39 +133,50 @@ def compare(solvers, hermitian=False):
     b = torch.randn(n)
     i = 0
     for f in solvers:
+        A_new = A
+        b_new = b
         for j in scalar:
-            # increase Norm of matrix A
-            A = A*j*2
-            b = b*j*2
-            norms[j-1] = torch.norm(A)
+            # increase Norm of matrix A linearly
+            A_new = A_new + A
+            b_new = b_new + b
+            norms[j-1] = torch.norm(A_new)
             # don't perform dimensionality reduction
             start_time = time.perf_counter()
-            V, H = f(A, b, 50)
+            V, H = f(A_new, b_new, 50)
             end_time = time.perf_counter()
             executionTime[i, j-1] = end_time - start_time
-            meanErrors[i, j-1] = calculateError(V, H, A)
+            meanErrors[i, j-1] = calculateError(H, A_new)
 
         plt.subplot(121)
-        plt.plot(norms, meanErrors[i, :])
+        plt.plot(norms, meanErrors[i, :], label=f.__name__)
         plt.ylabel('Mean Error of Matrix Entries')
         plt.xlabel('Norm of Matrix A')
+        plt.legend()
 
         plt.subplot(122)
-        plt.plot(norms, executionTime[i, :])
+        plt.plot(norms, executionTime[i, :], label=f.__name__)
         plt.ylabel('Execution time in s')
         plt.xlabel('Norm of Matrix A')
+        plt.legend()
 
         i += 1
     plt.show()
 
 
-def calculateError(V, H, A):
-    """calculates the mean error of entries"""
-    n = A.shape[0]
-    # Testing if V^(T)*A*V=H
-    test_H = torch.t(V) @ A @ V
-    errorMatrix = abs(test_H - H)
-    meanError = torch.sum(errorMatrix)/(n*n)
+def calculateError(H, A):
+    """calculates the mean error of each eigenvalue from Matrix H"""
+    # calculate eigenvalues of Matrix A
+    eigvals = torch.linalg.eigvals(A)
+    # calculate eigenvalues of Matrix H
+    eigvals_aprox = torch.linalg.eigvals(H)
+    nEigvals = len(eigvals_aprox)
+    errors = torch.zeros(nEigvals)
+    # for each eigenvalue of H find closest eigenvalue of Matrix A
+    for i in range(nEigvals):
+        error = min(abs(eigvals-eigvals_aprox[i]))
+        errors[i] = error
+    # calculate mean of errors
+    meanError = torch.sum(errors)/(nEigvals)
     return meanError
 
 

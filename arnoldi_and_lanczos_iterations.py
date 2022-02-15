@@ -62,7 +62,7 @@ def lanczos_iteration(A, b, m):
     3(2m-1)n flops
     """
     # Test if input matrix is hermitian
-    if not torch.allclose(torch.t(A), A):
+    if not torch.allclose(torch.t(A), A, rtol=1e-03, atol=1e-03):
         raise ValueError("The Input matrix A is not a hermitian matrix")
     eps = 1e-12  # allowed rounding Error
     n = A.shape[0]
