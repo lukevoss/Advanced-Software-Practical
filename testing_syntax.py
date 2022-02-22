@@ -1,34 +1,40 @@
 import torch
 from arnoldi_and_lanczos_iterations import *
+import tracemalloc
 
 
-torch.set_printoptions(precision=10)
-n = 20
-A = torch.randn(n, n)
+# torch.set_printoptions(precision=10)
+n = 10
+A = torch.randn(n, n)*100
 # symmetric A:
 A = A + torch.t(A)
 eigvals = torch.linalg.eigvals(A)
 
-#print(eigvals)
+# print(eigvals)
 
 b = torch.randn(n)
-functions = [arnoldi_iteration, lanczos_iteration]
+functions = [lanczos_iteration_saad, arnoldi_iteration]
 size = len(functions)
 i = 0
 for f in functions:
     i += 1
+    tracemalloc.start()
+    #tracemalloc.reset_peak()
     V, H = f(A, b, n)
+    current, peak = tracemalloc.get_traced_memory()
+    print(f"Current: {current} Bytes, Peak: {peak} Bytes")
+    tracemalloc.stop()
+    tracemalloc.clear_traces()
+
     eigvals_aprox = torch.linalg.eigvals(H)
-    #print(H)
+    # print(H)
     nEigvals = len(eigvals_aprox)
     errors = torch.zeros(nEigvals)
     for i in range(nEigvals):
         error = min(abs(eigvals-eigvals_aprox[i]))
         errors[i] = error
-    print(errors)
-    print(H.dtype)
-
-
+    # print(errors)
+    # print(H.dtype)
 
 
 # n = 50

@@ -88,7 +88,7 @@ class TestLanczosIteration:
         A = _A_symm
         b = _b
         m = A.shape[0]
-        V, T = lanczos_iteration(A, b, m)
+        V, T = lanczos_iteration_saad(A, b, m)
         # Testing if V^(T)*A*V=T
         assert torch.allclose(torch.t(V) @ A @ V, T, rtol=1e-03, atol=1e-03)
 
@@ -102,7 +102,7 @@ class TestLanczosIteration:
         A = _A_symm
         b = _b
         m = 3
-        V, T = lanczos_iteration(A, b, m)
+        V, T = lanczos_iteration_saad(A, b, m)
         # Testing if V^(T)*A*V=T
         assert torch.allclose(torch.t(V) @ A @ V, T, rtol=1e-03, atol=1e-05)
 
@@ -114,4 +114,4 @@ class TestLanczosIteration:
         b = _b
         m = 3
         with pytest.raises(ValueError):
-            V, T = lanczos_iteration(A, b, m)
+            V, T = lanczos_iteration_saad(A, b, m)
