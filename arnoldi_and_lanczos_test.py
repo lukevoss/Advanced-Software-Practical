@@ -22,23 +22,17 @@ higher error->  [ 0,  0,  3, 6]
 
 @pytest.fixture
 def _A():
-    # create matrix A with known eigenvalues 1 to n
+    # create a random nxn matrix A
     n = 5
-    eigvals = torch.linspace(1., n, n)
-    eigvecs = torch.randn(n, n)
-    A = torch.linalg.solve(eigvecs, (torch.diag(eigvals) @ eigvecs))
-    yield A
+    yield torch.randn(n, n)
 
 
 @pytest.fixture
 def _A_symm():
-    # create s symmetric matrix A with known eigenvalues 1 to n
+    # create a random symmetric nxn matrix A
     n = 5
-    eigvals = torch.linspace(1., n, n)
-    eigvecs = torch.randn(n, n)
-    # orthogonalize eigenvectors
-    eigvecs, R = torch.linalg.qr(eigvecs)
-    yield torch.linalg.solve(eigvecs, (torch.diag(eigvals) @ eigvecs))
+    A = torch.randn(n, n)
+    yield A + torch.t(A)
 
 
 @pytest.fixture

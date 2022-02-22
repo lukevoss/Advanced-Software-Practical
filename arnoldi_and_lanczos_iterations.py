@@ -20,6 +20,7 @@ def arnoldi_iteration(A, b, m):
     Cost:
     3/2(m^2-m+1)n flops
     """
+
     eps = 1e-12  # allowed rounding Error
     n = A.shape[0]
     V = torch.zeros(n, m)
@@ -61,9 +62,10 @@ def lanczos_iteration(A, b, m):
     Cost:
     3(2m-1)n flops
     """
+
     # Test if input matrix is hermitian
-    if not torch.allclose(torch.t(A), A, rtol=1e-03, atol=1e-03):
-        raise ValueError("The Input matrix A is not a hermitian matrix")
+    if not torch.allclose(torch.t(A), A, rtol=1e-03, atol=1e-05):
+        raise ValueError("The Input matrix is not a hermitian matrix")
     eps = 1e-12  # allowed rounding Error
     n = A.shape[0]
     V = torch.zeros(n, m)  # v0 = 0
@@ -72,7 +74,7 @@ def lanczos_iteration(A, b, m):
     #V[:, 0] = b/torch.linalg.norm(b, 2)
     v = b/torch.linalg.norm(b, 2)
     vo = torch.zeros(n)
-    beta = 0
+    beta = torch.zeros(1)
     V[:, 0] = v
     for j in range(m):
         # Multiply Matrix A each time with new Vector v to get new candidate vector w
@@ -134,9 +136,8 @@ def arnoldi_iteration(A, b, m):
     return V, H"""
 
 
-"""
 def lanczos_iteration_new(A, b, m):
-    ""Computes a orthogonal basis of the Krylov subspace of a symmetric Matrix A:
+    """Computes a orthogonal basis of the Krylov subspace of a symmetric Matrix A:
     the space spanned by {b, Ab, ..., A^n b}.
 
     Arguments
@@ -151,7 +152,7 @@ def lanczos_iteration_new(A, b, m):
 
     Cost:
     3(2m-1)n flops
-    ""
+    """
     eps = 1e-12  # allowed rounding Error
     n = A.shape[0]
     V = torch.zeros(n, m)  # v0 = 0
@@ -163,11 +164,6 @@ def lanczos_iteration_new(A, b, m):
     for j in range(m):
         # Multiply Matrix A each time with new Vector v to get new candidate vector w
         w = A @ V[:, j] - beta * V[:, j]
-
-
-
-
-
 
         # Subtract the projections on previous vectors
         T[j, j] = torch.t(V[:, j]) @ w
@@ -186,10 +182,10 @@ def lanczos_iteration_new(A, b, m):
                 else:  # if it happens stop iterating
                     return V, T
     return V, T
-    """
-"""
-def lanczos_iteration(A, b, m):
-    ""Computes a orthogonal basis of the Krylov subspace of a symmetric Matrix A:
+
+
+def lanczos_iteration_niesen_wright(A, b, m):
+    """Computes a orthogonal basis of the Krylov subspace of a symmetric Matrix A:
     the space spanned by {b, Ab, ..., A^n b}.
 
     Arguments
@@ -204,10 +200,10 @@ def lanczos_iteration(A, b, m):
 
     Cost:
     3(2m-1)n flops
-    ""
+    """
     eps = 1e-12  # allowed rounding Error
     n = A.shape[0]
-    V = torch.zeros(n, m)  # v0 = 0
+    V = torch.zeros(n, m)
     T = torch.zeros(m, m)
     # Normalizing input vector b
     V[:, 0] = b/torch.linalg.norm(b, 2)
@@ -221,14 +217,14 @@ def lanczos_iteration(A, b, m):
             beta = torch.linalg.norm(w, 2)
             V[:, j+1] = w/beta
         else:
-            w = torch.t(w) - T[j, j-1]*V[:, j-1] - T[j, j]*V[:, j]
+            w = torch.t(w) - beta * V[:, j-1] - T[j, j]*V[:, j]
             # Normalizing vector w
-            T[j, j-1] = torch.linalg.norm(w, 2)
-            T[j-1, j] = torch.linalg.norm(w, 2)
+            beta = torch.linalg.norm(w, 2)
+            T[j, j-1] = beta
+            T[j-1, j] = beta
             if j+1 < m:  # doesn't execute for last iteration
                 if T[j, j-1] > eps:  # checking if rounded 0
                     V[:, j+1] = w/T[j, j-1]
                 else:  # if it happens stop iterating
                     return V, T
     return V, T
-    """

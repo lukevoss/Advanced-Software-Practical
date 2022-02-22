@@ -1,29 +1,34 @@
 import torch
 from arnoldi_and_lanczos_iterations import *
 
-n = 30
+
+torch.set_printoptions(precision=10)
+n = 20
 A = torch.randn(n, n)
-#symmetric A:
+# symmetric A:
 A = A + torch.t(A)
 eigvals = torch.linalg.eigvals(A)
 
-print(eigvals)
+#print(eigvals)
 
 b = torch.randn(n)
-functions = [lanczos_iteration]
+functions = [arnoldi_iteration, lanczos_iteration]
 size = len(functions)
 i = 0
 for f in functions:
     i += 1
     V, H = f(A, b, n)
     eigvals_aprox = torch.linalg.eigvals(H)
-    print(eigvals_aprox)
+    #print(H)
     nEigvals = len(eigvals_aprox)
     errors = torch.zeros(nEigvals)
     for i in range(nEigvals):
         error = min(abs(eigvals-eigvals_aprox[i]))
         errors[i] = error
     print(errors)
+    print(H.dtype)
+
+
 
 
 # n = 50
