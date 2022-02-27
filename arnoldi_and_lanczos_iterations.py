@@ -115,6 +115,8 @@ def lanczos_iteration_niesen_wright(A, b, m):
     Cost:
     3(2m-1)n flops
     """
+    if not torch.allclose(torch.t(A), A, rtol=1e-03, atol=1e-05):
+        raise ValueError("The Input matrix is not a hermitian matrix")
     eps = 1e-12  # allowed rounding Error
     n = A.shape[0]
     V = torch.zeros(n, m)
@@ -128,19 +130,17 @@ def lanczos_iteration_niesen_wright(A, b, m):
         T[j, j] = torch.t(V[:, j]) @ w
         if j == 0:  # calculate V2 for next iteration
             w = torch.t(w) - T[j, j]*V[:, j]
-            beta = torch.linalg.norm(w, 2)
-            V[:, j+1] = w/beta
         else:
-            w = torch.t(w) - (beta * V[:, j-1]) - (T[j, j]*V[:, j])
-            # Normalizing vector w
-            beta = torch.linalg.norm(w, 2)
-            T[j, j-1] = beta
-            T[j-1, j] = beta
-            if j+1 < m:  # doesn't execute for last iteration
-                if abs(beta) > eps:  # checking if rounded 0
-                    V[:, j+1] = w/T[j, j-1]
-                else:  # if it happens stop iterating
-                    return V, T
+            w = torch.t(w) - (T[j, j-1] * V[:, j-1]) - (T[j, j]*V[:, j])
+        # Normalizing vector w
+        beta = torch.linalg.norm(w, 2)
+        if j+1 < m:  # doesn't execute for last iteration
+            if abs(beta) > eps:  # checking if rounded 0
+                T[j, j+1] = beta
+                T[j+1, j] = beta
+                V[:, j+1] = w/T[j, j+1]
+            else:  # if it happens stop iterating
+                return V, T
     return V, T
 
 

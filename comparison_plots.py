@@ -1,4 +1,3 @@
-from joblib import parallel_backend
 import torch
 import time
 import tracemalloc
@@ -27,13 +26,14 @@ def main():
     meaning when the matrices are symmetric. 
     """
     general_matrix_solvers = [arnoldi_iteration]
-    hermitian_matrix_solvers = [arnoldi_iteration, lanczos_iteration_saad]
+    hermitian_matrix_solvers = [lanczos_iteration_niesen_wright, lanczos_iteration_saad]
     # if hermitian_matrix_solvers are being compared: hermitian = True
     compare(hermitian_matrix_solvers, hermitian=True)
     return 0
 
 
 def compare(solvers, hermitian=False):
+    evalutationTimes = 10
     """
     First calcultate error and speed for different sizes of matrix A
     Different sizes of n from 1 to 100
@@ -42,44 +42,68 @@ def compare(solvers, hermitian=False):
     # number of solvers being compared
     n_comparisons = len(solvers)
     n = 100
-    sizeN = range(1, n+1)
+    stepsize = 5
+
+    sizeN = range(5, n+1, stepsize)
     # save mean error and execution time for every compared method
-    meanErrors = torch.zeros(n_comparisons, n)
-    executionTime = torch.zeros(n_comparisons, n)
-    peakStorage = torch.zeros(n_comparisons, n)
+    errors = torch.zeros(n_comparisons, len(sizeN))
+    executionTime = torch.zeros(n_comparisons, len(sizeN))
+    # peakStorage = torch.zeros(n_comparisons, len(sizeN))
+    standardDeviationError = torch.zeros(n_comparisons, len(sizeN))
+    standardDeviationTime = torch.zeros(n_comparisons, len(sizeN))
     i = 0
     # iterate over methods
     for f in solvers:
         for n in sizeN:  # iterate from 1x1 to nxn size Matrix A
-            # if we compare hermitian methods, create random hermitian Matrix
-            if hermitian == True:
-                A = torch.randn(n, n)
-                A = A + torch.t(A)
-            else:
-                A = torch.randn(n, n)
-            b = torch.randn(n)  # starting vector b
-            # don't perform dimensionality reduction to see impact of size of Matrix A
-            start_time = time.perf_counter()  # measure execution time
-            tracemalloc.start()  # tracking memory consumption
-            V, H = f(A, b, n)  # execute iterative solver method
-            end_time = time.perf_counter()
-            current, peak = tracemalloc.get_traced_memory()
-            tracemalloc.stop()
-            peakStorage[i, n-1] = peak
-            executionTime[i, n-1] = end_time - start_time
-            meanErrors[i, n-1] = calculateError(H, A)
+            meanError = torch.zeros(evalutationTimes)
+            meanExecutionTime = torch.zeros(evalutationTimes)
+            # meanPeakStorage = torch.zeros(evalutationTimes)
+            for j in range(evalutationTimes):
+                # if we compare hermitian methods, create random hermitian Matrix
+                if hermitian == True:
+                    A = torch.randn(n, n)
+                    A = A + torch.t(A)
+                else:
+                    A = torch.randn(n, n)
+                b = torch.randn(n)  # starting vector b
+                # don't perform dimensionality reduction to see impact of size of Matrix A
+                start_time = time.perf_counter()  # measure execution time
+                # tracemalloc.start()  # tracking memory consumption
+                V, H = f(A, b, n)  # execute iterative solver method
+                end_time = time.perf_counter()
+                # current, peak = tracemalloc.get_traced_memory()
+                tracemalloc.stop()
+                # meanPeakStorage[j] = peak
+                meanExecutionTime[j] = end_time - start_time
+                meanError[j] = calculateError(H, A)
+            # peakStorage[i, (n //
+                # stepsize)-1] = torch.sum(meanPeakStorage)/evalutationTimes
+            index = (n//stepsize) - 1
+            executionTime[i, index] = torch.sum(
+                meanExecutionTime)/evalutationTimes
+            errors[i, index] = torch.sum(meanError)/evalutationTimes
+            standardDeviationError[i, index] = torch.std(
+                meanError, unbiased=False)
+            standardDeviationTime[i, index] = torch.std(
+                meanExecutionTime, unbiased=False)
 
         # Plot different methods in same subplot
         # Comparing dimensions of matrix A to mean error of matrix H
+        errors_y1 = errors[i, :] + standardDeviationError[i, :]
+        errors_y2 = errors[i, :] - standardDeviationError[i, :]
         plt.subplot(121)
-        plt.plot(sizeN, meanErrors[i, :], label=f.__name__)
+        plt.fill_between(sizeN, errors_y1, errors_y2, alpha=.5)
+        plt.plot(sizeN, errors[i, :], label=f.__name__)
         plt.ylabel('Mean Error of Matrix Entries')
         plt.xlabel('Dimension n of nxn Matrix')
         plt.legend()
         #plt.title("Mean Error")
 
         # Comparing dimensions of matrix A to execution time
+        time_y1 = executionTime[i, :] + standardDeviationTime[i, :]
+        time_y2 = executionTime[i, :] - standardDeviationTime[i, :]
         plt.subplot(122)
+        plt.fill_between(sizeN, time_y1, time_y2, alpha=.5)
         plt.plot(sizeN, executionTime[i, :], label=f.__name__)
         plt.ylabel('Execution time in s')
         plt.xlabel('Dimension n of nxn Matrix')
@@ -104,31 +128,52 @@ def compare(solvers, hermitian=False):
     """
     plt.figure("Compare impact of Dimension Reduction m")
     n = 50
-    if hermitian == True:
-        A = torch.randn(n, n)
-        A = A + torch.t(A)
-    else:
-        A = torch.randn(n, n)
-    b = torch.randn(n)
-    meanErrors = torch.zeros(n_comparisons, n)
-    executionTime = torch.zeros(n_comparisons, n)
-    sizeM = range(1, 51)
+    stepsize = 5
+    sizeM = range(stepsize, n+1, stepsize)
+    errors = torch.zeros(n_comparisons, len(sizeM))
+    executionTime = torch.zeros(n_comparisons, len(sizeM))
+    standardDeviationError = torch.zeros(n_comparisons, len(sizeM))
+    standardDeviationTime = torch.zeros(n_comparisons, len(sizeM))
     i = 0
     for f in solvers:
         for m in sizeM:
-            start_time = time.perf_counter()
-            V, H = f(A, b, m)
-            end_time = time.perf_counter()
-            executionTime[i, m-1] = end_time - start_time
-            meanErrors[i, m-1] = calculateError(H, A)
+            meanError = torch.zeros(evalutationTimes)
+            meanExecutionTime = torch.zeros(evalutationTimes)
+            # meanPeakStorage = torch.zeros(evalutationTimes)
+            for j in range(evalutationTimes):
+                if hermitian == True:
+                    A = torch.randn(n, n)
+                    A = A + torch.t(A)
+                else:
+                    A = torch.randn(n, n)
+                b = torch.randn(n)
+                start_time = time.perf_counter()
+                V, H = f(A, b, m)
+                end_time = time.perf_counter()
+                meanExecutionTime[j] = end_time - start_time
+                meanError[j] = calculateError(H, A)
+            index = (m//stepsize)-1
+            executionTime[i, index] = torch.sum(
+                meanExecutionTime)/evalutationTimes
+            errors[i, index] = torch.sum(meanError)/evalutationTimes
+            standardDeviationError[i, index] = torch.std(
+                meanError, unbiased=False)
+            standardDeviationTime[i, index] = torch.std(
+                meanExecutionTime, unbiased=False)
 
+        errors_y1 = errors[i, :] + standardDeviationError[i, :]
+        errors_y2 = errors[i, :] - standardDeviationError[i, :]
         plt.subplot(121)
-        plt.plot(sizeM, meanErrors[i, :], label=f.__name__)
+        plt.fill_between(sizeM, errors_y1, errors_y2, alpha=.5)
+        plt.plot(sizeM, errors[i, :], label=f.__name__)
         plt.ylabel('Mean Error of Matrix Entries')
         plt.xlabel('Reduced Dimension m of 50x50 Matrix')
         plt.legend()
 
+        time_y1 = executionTime[i, :] + standardDeviationTime[i, :]
+        time_y2 = executionTime[i, :] - standardDeviationTime[i, :]
         plt.subplot(122)
+        plt.fill_between(sizeM, time_y1, time_y2, alpha=.5)
         plt.plot(sizeM, executionTime[i, :], label=f.__name__)
         plt.ylabel('Execution time in s')
         plt.xlabel('Reduced Dimension m of 50x50 Matrix')
@@ -144,39 +189,59 @@ def compare(solvers, hermitian=False):
     The norm is increased by multiplied scalars ranging from 1 to 100 with stepsize 2 to the matrix A.
     """
     plt.figure("Compare impact of norm of matrix A")
-    scalar = range(1, n+1)
-    meanErrors = torch.zeros(n_comparisons, n)
-    executionTime = torch.zeros(n_comparisons, n)
-    norms = torch.zeros(n)
-    if hermitian == True:
-        A = torch.randn(n, n)
-        A = A + torch.t(A)
-    else:
-        A = torch.randn(n, n)
-    b = torch.randn(n)
+    stepsize = 10
+    scalarMax = 300
+    scalar = range(stepsize, scalarMax+1, stepsize)
+    errors = torch.zeros(n_comparisons, len(scalar))
+    executionTime = torch.zeros(n_comparisons, len(scalar))
+    norms = torch.zeros(len(scalar))
+    standardDeviationError = torch.zeros(n_comparisons, len(scalar))
+    standardDeviationTime = torch.zeros(n_comparisons, len(scalar))
     i = 0
     for f in solvers:
-        A_new = A
-        b_new = b
-        for j in scalar:
-            # increase Norm of matrix A linearly
-            A_new = A_new + A
-            b_new = b_new + b
-            norms[j-1] = torch.norm(A_new)
-            # don't perform dimensionality reduction
-            start_time = time.perf_counter()
-            V, H = f(A_new, b_new, 50)
-            end_time = time.perf_counter()
-            executionTime[i, j-1] = end_time - start_time
-            meanErrors[i, j-1] = calculateError(H, A_new)
+        for s in scalar:
+            meanError = torch.zeros(evalutationTimes)
+            meanExecutionTime = torch.zeros(evalutationTimes)
+            meanNorm = torch.zeros(evalutationTimes)
+            # meanPeakStorage = torch.zeros(evalutationTimes)
+            for j in range(evalutationTimes):
+                if hermitian == True:
+                    A = torch.randn(n, n)*s
+                    A = A + torch.t(A)
+                else:
+                    A = torch.randn(n, n)*s
+                b = torch.randn(n)*s
+                # increase Norm of matrix A linearly
+                meanNorm[j] = torch.norm(A)
+                # don't perform dimensionality reduction
+                start_time = time.perf_counter()
+                V, H = f(A, b, 50)
+                end_time = time.perf_counter()
+                meanExecutionTime[j] = end_time - start_time
+                meanError[j] = calculateError(H, A)
+            index = (s//stepsize)-1
+            norms[index] = torch.sum(meanNorm)/evalutationTimes
+            executionTime[i, index] = torch.sum(
+                meanExecutionTime)/evalutationTimes
+            errors[i, index] = torch.sum(meanError)/evalutationTimes
+            standardDeviationError[i, index] = torch.std(
+                meanError, unbiased=False)
+            standardDeviationTime[i, index] = torch.std(
+                meanExecutionTime, unbiased=False)
 
+        errors_y1 = errors[i, :] + standardDeviationError[i, :]
+        errors_y2 = errors[i, :] - standardDeviationError[i, :]
         plt.subplot(121)
-        plt.plot(norms, meanErrors[i, :], label=f.__name__)
+        plt.fill_between(norms, errors_y1, errors_y2, alpha=.5)
+        plt.plot(norms, errors[i, :], label=f.__name__)
         plt.ylabel('Mean Error of Matrix Entries')
         plt.xlabel('Frobeniusnorm of Matrix A')
         plt.legend()
 
+        time_y1 = executionTime[i, :] + standardDeviationTime[i, :]
+        time_y2 = executionTime[i, :] - standardDeviationTime[i, :]
         plt.subplot(122)
+        plt.fill_between(norms, time_y1, time_y2, alpha=.5)
         plt.plot(norms, executionTime[i, :], label=f.__name__)
         plt.ylabel('Execution time in s')
         plt.xlabel('Frobeniusnorm of Matrix A')
