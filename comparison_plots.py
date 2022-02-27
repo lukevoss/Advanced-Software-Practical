@@ -25,10 +25,10 @@ def main():
     Hermitian Matrix Solvers (e.g. Lanczos-Iteration) just work with hermitian matrices, 
     meaning when the matrices are symmetric. 
     """
-    general_matrix_solvers = [arnoldi_iteration]
+    general_matrix_solvers = [arnoldi_iteration_gram_schmidt, arnoldi_iteration_modified]
     hermitian_matrix_solvers = [lanczos_iteration_niesen_wright, lanczos_iteration_saad]
     # if hermitian_matrix_solvers are being compared: hermitian = True
-    compare(hermitian_matrix_solvers, hermitian=True)
+    compare(general_matrix_solvers, hermitian=False)
     return 0
 
 

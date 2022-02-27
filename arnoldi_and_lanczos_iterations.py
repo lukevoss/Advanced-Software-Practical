@@ -4,8 +4,49 @@ import torch
 # Arnoldi Iteration
 
 
-def arnoldi_iteration(A, b, m):
-    """Computes a orthogonal basis of the (m+1)-Krylov subspace of A: the space
+def arnoldi_iteration_gram_schmidt(A, b, m):
+    """Arnoldi-Modified Gram-Schmidt
+
+    Computes a orthogonal basis of the (m+1)-Krylov subspace of A: the space
+    spanned by {b, Ab, ..., A^m b}.
+
+    Arguments
+    A:  n × n torch array
+    b:  initial torch vector (length n)
+    m:  dimension of Krylov subspace (int), must be >= 1
+
+    Returns
+    V:  n x m torch array, the columns are an orthonormal basis of the
+        Krylov subspace.
+    H:  m x m torch array, A on basis V. It is upper Hessenberg.
+
+    Cost:
+    3/2(m^2-m+1)n flops
+    """
+
+    eps = 1e-12  # allowed rounding Error
+    n = A.shape[0]
+    V = torch.zeros(n, m)
+    H = torch.zeros(m, m)
+    # Normalizing input vector b
+    V[:, 0] = b/torch.linalg.norm(b, 2)
+    for j in range(m):
+        for i in range(j+1):  # Subtract the projections on previous vectors
+            H[i, j] = (A @ V[:, j]) @ V[:, i]
+        w = A @ V[:, j] - V @ H[:, j]
+        if j+1 < m:
+            H[j+1, j] = torch.linalg.norm(w, 2)
+            if H[j+1, j] > eps:  # checking if rounded 0
+                V[:, j+1] = w/H[j+1, j]
+            else:  # if it happens stop iterating
+                return V, H
+    return V, H
+
+
+def arnoldi_iteration_modified(A, b, m):
+    """Arnoldi-Modified Gram-Schmidt
+
+    Computes a orthogonal basis of the (m+1)-Krylov subspace of A: the space
     spanned by {b, Ab, ..., A^m b}.
 
     Arguments
@@ -43,6 +84,52 @@ def arnoldi_iteration(A, b, m):
                 return V, H
     return V, H
 
+
+def arnoldi_iteration_modified_reorthogonalization(A, b, m):
+    """Arnoldi-Modified Gram-Schmidt with reorthogonalistation
+
+    Computes a orthogonal basis of the (m+1)-Krylov subspace of A: the space
+    spanned by {b, Ab, ..., A^m b}.
+
+    Arguments
+    A:  n × n torch array
+    b:  initial torch vector (length n)
+    m:  dimension of Krylov subspace (int), must be >= 1
+
+    Returns
+    V:  n x m torch array, the columns are an orthonormal basis of the
+        Krylov subspace.
+    H:  m x m torch array, A on basis V. It is upper Hessenberg.
+
+    Cost:
+    3/2(m^2-m+1)n flops
+    """
+
+    eps = 1e-12  # allowed rounding Error
+    n = A.shape[0]
+    V = torch.zeros(n, m)
+    H = torch.zeros(m, m)
+    # Normalizing input vector b
+    V[:, 0] = b/torch.linalg.norm(b, 2)
+    for j in range(m):
+        # Multiply Matrix A each time with new Vector v to get new candidate vector w
+        w = A @ V[:, j]
+        initialNorm_w = torch.linalg.norm(w, 2)
+        for i in range(j+1):  # Subtract the projections on previous vectors
+            H[i, j] = torch.t(V[:, i]) @ w
+            w = w - H[i, j]*V[:, i]
+        # Normalizing vector w
+        norm_w = torch.linalg.norm(w, 2)
+        if abs(initialNorm_w-norm_w) < eps:
+            w = w/norm_w
+            TODO
+        if j+1 < m:
+            H[j+1, j] = norm_w
+            if H[j+1, j] > eps:  # checking if rounded 0
+                V[:, j+1] = w/H[j+1, j]
+            else:  # if it happens stop iterating
+                return V, H
+    return V, H
 # Lanczos Iteration
 
 

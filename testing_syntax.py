@@ -14,7 +14,7 @@ eigvals = torch.linalg.eigvals(A)
 # print(eigvals)
 
 b = torch.randn(n)*scalar
-functions = [lanczos_iteration_niesen_wright, arnoldi_iteration]
+functions = [lanczos_iteration_niesen_wright, arnoldi_iteration_gram_schmidt]
 size = len(functions)
 i = 0
 for f in functions:
