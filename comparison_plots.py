@@ -25,10 +25,12 @@ def main():
     Hermitian Matrix Solvers (e.g. Lanczos-Iteration) just work with hermitian matrices, 
     meaning when the matrices are symmetric. 
     """
-    general_matrix_solvers = [arnoldi_iteration_gram_schmidt, arnoldi_iteration_modified]
-    hermitian_matrix_solvers = [lanczos_iteration_niesen_wright, lanczos_iteration_saad]
+    general_matrix_solvers = [arnoldi_iteration_gram_schmidt,
+                              arnoldi_iteration_reorthogonalized, arnoldi_iteration_modified]
+    hermitian_matrix_solvers = [lanczos_iteration_niesen_wright,
+                                lanczos_iteration_saad, arnoldi_iteration_modified]
     # if hermitian_matrix_solvers are being compared: hermitian = True
-    compare(general_matrix_solvers, hermitian=False)
+    compare(hermitian_matrix_solvers, hermitian=True)
     return 0
 
 
@@ -189,8 +191,8 @@ def compare(solvers, hermitian=False):
     The norm is increased by multiplied scalars ranging from 1 to 100 with stepsize 2 to the matrix A.
     """
     plt.figure("Compare impact of norm of matrix A")
-    stepsize = 10
-    scalarMax = 300
+    stepsize = 20
+    scalarMax = 1000
     scalar = range(stepsize, scalarMax+1, stepsize)
     errors = torch.zeros(n_comparisons, len(scalar))
     executionTime = torch.zeros(n_comparisons, len(scalar))

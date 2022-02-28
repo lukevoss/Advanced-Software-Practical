@@ -1,7 +1,6 @@
 import torch
-import sys
+from torch.profiler import profile, record_function, ProfilerActivity
 from arnoldi_and_lanczos_iterations import *
-import tracemalloc
 
 
 # torch.set_printoptions(precision=10)
@@ -13,13 +12,15 @@ A = A + torch.t(A)
 eigvals = torch.linalg.eigvals(A)
 # print(eigvals)
 
-b = torch.randn(n)*scalar
-functions = [lanczos_iteration_niesen_wright, arnoldi_iteration_gram_schmidt]
+b = torch.randn(n)
+functions = [arnoldi_iteration_modified]
 size = len(functions)
 i = 0
 for f in functions:
     i += 1
-    V, H = f(A, b, n)
+    with profile(activities=[ProfilerActivity.CPU],
+        profile_memory=True, record_shapes=True) as prof:
+        V, H = f(A, b, n)
     eigvals_aprox = torch.linalg.eigvals(H)
     # print(H)
     nEigvals = len(eigvals_aprox)
@@ -28,6 +29,7 @@ for f in functions:
         error = min(abs(eigvals-eigvals_aprox[i]))
         errors[i] = error
     print(errors)
+    prof.export_chrome_trace("trace.json")
 
 
 # n = 50

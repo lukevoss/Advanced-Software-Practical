@@ -85,7 +85,7 @@ def arnoldi_iteration_modified(A, b, m):
     return V, H
 
 
-def arnoldi_iteration_modified_reorthogonalization(A, b, m):
+def arnoldi_iteration_reorthogonalized(A, b, m):
     """Arnoldi-Modified Gram-Schmidt with reorthogonalistation
 
     Computes a orthogonal basis of the (m+1)-Krylov subspace of A: the space
@@ -120,11 +120,14 @@ def arnoldi_iteration_modified_reorthogonalization(A, b, m):
             w = w - H[i, j]*V[:, i]
         # Normalizing vector w
         norm_w = torch.linalg.norm(w, 2)
-        if abs(initialNorm_w-norm_w) < eps:
-            w = w/norm_w
-            TODO
+        differenceNorm = abs(initialNorm_w-norm_w)
+        # Reorthogonalistation:
+        if differenceNorm/initialNorm_w < 1/100:
+            for i in range(j+1):  # Subtract the projections on previous vectors
+                temp = torch.t(V[:, i]) @ w
+                w = w - temp*V[:, i]
         if j+1 < m:
-            H[j+1, j] = norm_w
+            H[j+1, j] = torch.linalg.norm(w, 2)
             if H[j+1, j] > eps:  # checking if rounded 0
                 V[:, j+1] = w/H[j+1, j]
             else:  # if it happens stop iterating
@@ -218,7 +221,7 @@ def lanczos_iteration_niesen_wright(A, b, m):
         if j == 0:  # calculate V2 for next iteration
             w = torch.t(w) - T[j, j]*V[:, j]
         else:
-            w = torch.t(w) - (T[j, j-1] * V[:, j-1]) - (T[j, j]*V[:, j])
+            w = torch.t(w) - (T[j-1, j] * V[:, j-1]) - (T[j, j]*V[:, j])
         # Normalizing vector w
         beta = torch.linalg.norm(w, 2)
         if j+1 < m:  # doesn't execute for last iteration
