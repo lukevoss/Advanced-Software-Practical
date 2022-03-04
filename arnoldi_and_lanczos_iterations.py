@@ -5,7 +5,7 @@ import torch
 
 
 def arnoldi_iteration_gram_schmidt(A, b, m):
-    """Arnoldi-Modified Gram-Schmidt
+    """Arnoldi-Gram-Schmidt Iteration
 
     Computes a orthogonal basis of the (m+1)-Krylov subspace of A: the space
     spanned by {b, Ab, ..., A^m b}.
@@ -21,30 +21,37 @@ def arnoldi_iteration_gram_schmidt(A, b, m):
     H:  m x m torch array, A on basis V. It is upper Hessenberg.
 
     Cost:
-    3/2(m^2-m+1)n flops
+        Flops: 2*n*m^2
+        Storage: (m + 1)n
+
+    Based on:
+    Iterative Methods for Sparse Linear Systems, Yousef Saad, Algorithm 6.1
     """
 
-    eps = 1e-12  # allowed rounding Error
+    eps = 1e-10  # allowed rounding Error
     n = A.shape[0]
     V = torch.zeros(n, m)
     H = torch.zeros(m, m)
     # Normalizing input vector b
     V[:, 0] = b/torch.linalg.norm(b, 2)
+
     for j in range(m):
-        for i in range(j+1):  # Subtract the projections on previous vectors
+        # Gram-Schmidt orthogonalization for each new created Vector w (H[i,j])
+        for i in range(j+1):
             H[i, j] = (A @ V[:, j]) @ V[:, i]
         w = A @ V[:, j] - V @ H[:, j]
+        # Inserting the rest of calculated values in matrices
         if j+1 < m:
             H[j+1, j] = torch.linalg.norm(w, 2)
             if H[j+1, j] > eps:  # checking if rounded 0
-                V[:, j+1] = w/H[j+1, j]
-            else:  # if it happens stop iterating
+                V[:, j+1] = w/H[j+1, j]  # normalizing w
+            else:  # if rounded 0 stop iterating
                 return V, H
     return V, H
 
 
 def arnoldi_iteration_modified(A, b, m):
-    """Arnoldi-Modified Gram-Schmidt
+    """Arnoldi-Modified Gram-Schmidt Iteration
 
     Computes a orthogonal basis of the (m+1)-Krylov subspace of A: the space
     spanned by {b, Ab, ..., A^m b}.
@@ -60,10 +67,19 @@ def arnoldi_iteration_modified(A, b, m):
     H:  m x m torch array, A on basis V. It is upper Hessenberg.
 
     Cost:
-    3/2(m^2-m+1)n flops
+        Flops: 2*n*m^2
+        Storage: (m + 1)n
+
+    Based on:
+    Iterative Methods for Sparse Linear Systems, Yousef Saad, 
+    Algorithm 6.2
+    and
+    Algorithm 919: A Krylov Subspace Algorithm for Evaluating 
+    the ϕ-Functions Appearing in Exponential Integrators, 
+    Jitse Niesen and Will M. Wright, Algorithm 1
     """
 
-    eps = 1e-12  # allowed rounding Error
+    eps = 1e-10  # allowed rounding Error
     n = A.shape[0]
     V = torch.zeros(n, m)
     H = torch.zeros(m, m)
@@ -72,21 +88,23 @@ def arnoldi_iteration_modified(A, b, m):
     for j in range(m):
         # Multiply Matrix A each time with new Vector v to get new candidate vector w
         w = A @ V[:, j]
-        for i in range(j+1):  # Subtract the projections on previous vectors
+        # Modified Gram-Schmidt orthogonalization of new vector w
+        for i in range(j+1):
             H[i, j] = torch.t(V[:, i]) @ w
             w = w - H[i, j]*V[:, i]
-        # Normalizing vector w
+        # Insert the rest of calculated values in matrices
         if j+1 < m:
+            # Normalizing vector w
             H[j+1, j] = torch.linalg.norm(w, 2)
             if H[j+1, j] > eps:  # checking if rounded 0
-                V[:, j+1] = w/H[j+1, j]
-            else:  # if it happens stop iterating
+                V[:, j+1] = w/H[j+1, j]  # normalizing w
+            else:  # if rounded 0 stop iterating
                 return V, H
     return V, H
 
 
 def arnoldi_iteration_reorthogonalized(A, b, m):
-    """Arnoldi-Modified Gram-Schmidt with reorthogonalistation
+    """Arnoldi-Modified Gram-Schmidt Iteration with reorthogonalistation 
 
     Computes a orthogonal basis of the (m+1)-Krylov subspace of A: the space
     spanned by {b, Ab, ..., A^m b}.
@@ -102,7 +120,12 @@ def arnoldi_iteration_reorthogonalized(A, b, m):
     H:  m x m torch array, A on basis V. It is upper Hessenberg.
 
     Cost:
-    3/2(m^2-m+1)n flops
+        Flops: 4*n*m^2
+        Storage: (m + 1)n
+
+    Based on:
+    Iterative Methods for Sparse Linear Systems, Yousef Saad, 
+    6.3.2 Practical Implementations
     """
 
     eps = 1e-12  # allowed rounding Error
@@ -115,29 +138,33 @@ def arnoldi_iteration_reorthogonalized(A, b, m):
         # Multiply Matrix A each time with new Vector v to get new candidate vector w
         w = A @ V[:, j]
         initialNorm_w = torch.linalg.norm(w, 2)
-        for i in range(j+1):  # Subtract the projections on previous vectors
+        # Modified Gram-Schmidt orthogonalization of new vector w
+        for i in range(j+1):
             H[i, j] = torch.t(V[:, i]) @ w
             w = w - H[i, j]*V[:, i]
-        # Normalizing vector w
+        # compare initial and new Norm of w
         norm_w = torch.linalg.norm(w, 2)
         differenceNorm = abs(initialNorm_w-norm_w)
-        # Reorthogonalistation:
+        # Reorthogonalistation if difference of Norms is small (Possible severe cancelations)
         if differenceNorm/initialNorm_w < 1/100:
             for i in range(j+1):  # Subtract the projections on previous vectors
                 temp = torch.t(V[:, i]) @ w
                 w = w - temp*V[:, i]
+        # Insert the rest of calculated values in matrices
         if j+1 < m:
             H[j+1, j] = torch.linalg.norm(w, 2)
             if H[j+1, j] > eps:  # checking if rounded 0
-                V[:, j+1] = w/H[j+1, j]
+                V[:, j+1] = w/H[j+1, j]  # normalizing w
             else:  # if it happens stop iterating
                 return V, H
     return V, H
-# Lanczos Iteration
+
+
+############################# Lanczos Iterations #################################
 
 
 def lanczos_iteration_saad(A, b, m):
-    """Computes a orthogonal basis of the Krylov subspace of a symmetric Matrix A:
+    """Computes a orthogonal basis of the Krylov subspace of a hermitian Matrix A:
     the space spanned by {b, Ab, ..., A^n b}.
 
     Arguments
@@ -275,9 +302,9 @@ def arnoldi_iteration(A, b, m):
             return V, H
     return V, H"""
 
-
+"""
 def lanczos_iteration_new(A, b, m):
-    """Computes a orthogonal basis of the Krylov subspace of a symmetric Matrix A:
+    ""Computes a orthogonal basis of the Krylov subspace of a symmetric Matrix A:
     the space spanned by {b, Ab, ..., A^n b}.
 
     Arguments
@@ -292,7 +319,7 @@ def lanczos_iteration_new(A, b, m):
 
     Cost:
     3(2m-1)n flops
-    """
+    ""
     eps = 1e-12  # allowed rounding Error
     n = A.shape[0]
     V = torch.zeros(n, m)  # v0 = 0
@@ -322,3 +349,4 @@ def lanczos_iteration_new(A, b, m):
                 else:  # if it happens stop iterating
                     return V, T
     return V, T
+"""
