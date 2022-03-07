@@ -3,20 +3,25 @@ import torch
 from arnoldi_and_lanczos_iterations import *
 
 """
+Testing file for Algorithms in arnoldi_and_lanczos_iterations.py
+
+
 For large matrices the problem arises that the calculation V^T*A*V is numerically inaccurate. 
 This is especially the case for values which are equal to 0 in the H or T matrix.
 
-H = 
-low error ->    [-2, -1,  1, 7]<-low error
-                [ 7,  3, -3, 2]
-                [ 0,  3,  5, 4]
-higher error->  [ 0,  0,  3, 6]
+    Arnoldi-Iteration:
+        H = 
+        low error ->    [-2, -1,  1, 7]<-low error
+                        [ 7,  3, -3, 2]
+                        [ 0,  3,  5, 4]
+        higher error->  [ 0,  0,  3, 6]
 
-T = 
-low error ->    [-2, -1,  0, 0]<-higher error
-                [ 7,  3, -3, 0]
-                [ 0,  3,  5, 4]
-higher error->  [ 0,  0,  3, 6]
+    Lanczos-Iteration
+        T = 
+        low error ->    [-2, -1,  0, 0]<-higher error
+                        [ 7,  3, -3, 0]
+                        [ 0,  3,  5, 4]
+        higher error->  [ 0,  0,  3, 6]
 """
 
 
@@ -181,6 +186,7 @@ class TestLanczosIterationSaad:
         A = _A
         b = _b
         m = 3
+        # test raising Error
         with pytest.raises(ValueError):
             V, T = lanczos_iteration_saad(A, b, m)
 
@@ -221,5 +227,6 @@ class TestLanczosIterationNiesenWright:
         A = _A
         b = _b
         m = 3
+        # test raising Error
         with pytest.raises(ValueError):
             V, T = lanczos_iteration_niesen_wright(A, b, m)
